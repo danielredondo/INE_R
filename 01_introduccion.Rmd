@@ -1,0 +1,184 @@
+
+---
+title: "INE con R: descargando datos del Instituto Nacional de Estadística desde R"
+subtitle: "Primera parte: Introducción"
+author: "Daniel Redondo-Sánchez - daniel.redondo.easp@juntadeandalucia.es"
+date: "11-02-2019"
+output:
+  html_document:
+    highlight: tango
+    theme: readable    
+    toc: yes
+    toc_float:
+      collapsed: no
+      smooth_scroll: no
+  pdf_document:
+    toc: yes
+editor_options: 
+  chunk_output_type: console
+---
+
+**Con este documento vamos a aprender a descargar información del Instituto Nacional de Estadística (INE) usando R.**
+
+## 1. Obtención de URL
+
+El primer objetivo será el de obtener, o crear, una URL de la cual descargar los datos deseados.
+
+### 1.1. Generador de URL JSON
+
+Para descargar datos directamente del INE podemos hacer uso del [generador de URLs JSON](https://www.ine.es/dyngs/DataLab/manual.html?cid=66), que genera una dirección URL desde la que se puede acceder a estadísticas determinadas, en formato `JSON`.
+
+Dos enlaces nos serán muy útiles para comprender este generador, e incluso no tener que depender de él.
+
+* [Definición de URLs](https://www.ine.es/dyngs/DataLab/manual.html?cid=47). Nos permite comprender los distintos parámetros de la URL.
+
+* [Obtención de identificadores de objetos usando INEbase](https://www.ine.es/dyngs/DataLab/es/manual.html?cid=1259945947403). Permite reconocer el identificador de la operación estadística que se incluye en la URL.
+
+### 1.2. Generar URL sabiendo número de tabla
+
+Si queremos descargar información de una URL del tipo
+
+```{}
+http://ine.es/jaxiT3/Tabla.htm?t=9687&L=0
+```
+
+que corresponde a "Población residente por fecha, sexo y edad", podemos extraer de la URL el identificador de la tabla, que es `9687`, y podemos descargar la información en 
+
+```{}
+http://servicios.ine.es/wstempus/js/ES/DATOS_TABLA/9687?nult=2&tip=AM
+```
+
+El parámetro `nult` indica que nos proporcione los n últimos datos, mientras que `tip` indica el tipo de descarga (A = amigable, M = metadatos, AM = amigable + metadatos).
+
+### 1.3. Generar URL sabiendo que es un fichero del tipo PcAxis 
+
+Por ejemplo, si queremos descargar información de mortalidad,
+
+```{}
+http://ine.es/jaxi/Tabla.htm?path=/t15/p417/a2017/l0/&file=01007.px&L=0
+```
+
+es la URL de Muertes fetales tardías por causas (lista perinatal), sexo y semanas de gestación, dentro de defunciones según la Causa de Muerte 2017.
+
+En este caso, podemos ver un `.px` dentro de la URL, lo que indica que en última instancia estamos trabajando con un fichero PcAxis, el formato que usa el INE para editar y publicar sus datos.
+
+El identificador de la tabla se creará usando la parte de la URL `path=/t15/p417/a2017/l0/&file=01007.px` y extrayendo `path=` y `&file=`:
+
+
+```{}
+/t15/p417/a2017/l0/01007.px
+```
+
+La URL deseada será entonces:
+
+```{}
+http://servicios.ine.es/wstempus/js/ES/DATOS_TABLA/t15/p417/a2017/l0/01007.px?tip=AM
+```
+
+## 2. Petición a INE
+
+### 2.1. Primeros pasos
+
+Cargamos los paquetes necesarios:
+```{r message=FALSE}
+library(httr)
+library(rlist)
+library(dplyr)
+```
+
+```{r}
+url <- "http://servicios.ine.es/wstempus/js/ES/DATOS_TABLA/t15/p417/a2017/l0/01007.px?tip=AM"
+```
+
+Usamos la función `GET` del paquete `httr`, usando como único parámetro la URL obtenida en el paso anterior.
+
+```{r peticion}
+muertes_json <- GET(url)
+```
+
+La variable `status_code` indica el éxito (o no) de la petición realizada. Un código que empieza por 2, o 3, suele indicar que la petición ha sido exitosa. Si el `status_code` comienza por 4, es que hay un problema en tu código (p.e. 404: la página no encuentra lo que solicitas), mientras que si comienza por 5, el problema está en la página web.
+
+```{r}
+muertes_json$status_code
+```
+
+Podemos usar `http_type` para conocer el tipo de información que hemos obtenido.
+
+```{r}
+http_type(muertes_json)
+```
+
+### 2.2. Pre-procesamiento
+
+La información debe ser pre-procesada antes de poder ser usada. Vemos la información cruda:
+
+```{r}
+muertes_json
+```
+
+La función `content` extrae el contenido de lo solicitado. Vemos las primeras dos componentes del contenido:
+
+```{r}
+muertes_contenido <- content(muertes_json)
+head(muertes_contenido, 2)
+```
+
+Ya podríamos acceder a algunos datos, como por ejemplo:
+
+```{r}
+muertes_contenido[[1]]$Nombre
+muertes_contenido[[1]]$MetaData[[1]]$Codigo
+muertes_contenido[[1]]$Data[[1]]$Valor
+```
+
+Pero esto no es lo ideal, así que seguimos procesando. Utilizaremos el paquete `rlist` de manera iterativa para extraer los datos y metadatos de la información descargada, y formar así un data.frame.
+
+```{r}
+n <- length(muertes_contenido)
+
+for(i in 1:n){
+   dato.i <- muertes_contenido[[i]]
+   muertes.i <- list.select(dato.i$Data, Valor) %>% list.stack %>%
+         cbind(codigo = dato.i$MetaData[[1]]$Nombre) %>%
+         cbind(sexo = dato.i$MetaData[[2]]$Nombre) %>%
+         cbind(s_gest = dato.i$MetaData[[3]]$Nombre)
+   ifelse(i == 1, muertes <- muertes.i, muertes <- rbind(muertes, muertes.i))
+}
+
+head(muertes)
+```
+
+También podríamos haber descargado los códigos de las variables, en lugar de las etiquetas:
+
+```{r}
+n <- length(muertes_contenido)
+
+for(i in 1:n){
+   dato.i <- muertes_contenido[[i]]
+   muertes.i <- list.select(dato.i$Data, Valor) %>% list.stack %>%
+         cbind(codigo = dato.i$MetaData[[1]]$Codigo) %>%
+         cbind(sexo = dato.i$MetaData[[2]]$Codigo) %>%
+         cbind(s_gest = dato.i$MetaData[[3]]$Codigo)
+   ifelse(i == 1, muertes <- muertes.i, muertes <- rbind(muertes, muertes.i))
+}
+
+head(muertes)
+```
+
+### 2.3. Ejemplo de uso
+
+Con el data.frame obtenido, podemos trabajar. Por ejemplo:
+
+```{r}
+library(ggplot2)
+
+datos <- subset(muertes, muertes$codigo == "0193ixxiitodaslascausas" &
+                  muertes$sexo != "ambossexos" &
+                  ! muertes$s_gest %in% c("total", "noconsta"))
+
+ggplot(datos, aes(x = s_gest, y = Valor, fill = sexo)) +
+  geom_bar(stat = "identity",  position = "dodge") +
+  ylab("Defunciones") + xlab("Semanas de gestación") +
+  ggtitle("Defunciones según semanas de gestación, por sexos") +
+  theme(legend.position="top")
+```
