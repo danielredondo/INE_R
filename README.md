@@ -5,3 +5,10 @@ En este tutorial, se muestra cómo descargar información del Instituto Nacional
 
 1. Introducción y primera descarga
 2. Descarga avanzada
+
+
+<img src="logos\logo_ibs.jpg" width="500"/>
+
+<img src="logos\logo_easp.png" width="500"/>
+
+<img src="logos\logo_ciber.png" width="500"/>
