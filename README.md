@@ -1,10 +1,13 @@
 # Tutorial para descargar datos del Instituto Nacional de Estadística (INE) con R usando el servicio API JSON
-# Daniel Redondo Sánchez
+### *Daniel Redondo Sánchez*
 
 En este tutorial, se muestra cómo descargar información del Instituto Nacional de Estadística usando R, en dos partes:
 
 1. Introducción y primera descarga
 2. Descarga avanzada
+
+
+[![DOI](https://zenodo.org/badge/196965728.svg)](https://zenodo.org/badge/latestdoi/196965728)
 
 
 <img src="logos\logo_ibs.jpg" width="500"/>
