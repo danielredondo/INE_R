@@ -32,7 +32,7 @@ library(rlist)
 # http://ine.es/jaxiT3/Tabla.htm?t=9687&L=0,
 # ponemos el identificador 9678
 # Descargamos sin metadatos para que sea más rápido
-url <- "http://servicios.ine.es/wstempus/js/ES/DATOS_TABLA/9687?nult=6&tip=A"
+url <- "http://servicios.ine.es/wstempus/js/ES/DATOS_TABLA/9687?nult=5&tip=A"
 poblacion_json <- GET(url)
 
 ```
@@ -75,6 +75,8 @@ poblacion_contenido <- content(poblacion_json)
 n <- length(poblacion_contenido)
 
 for(i in 1:n){
+  # Medidor de proceso
+  # if(i %% 1000 == 0) print(paste0(i, "/", n))
   dato.i <- poblacion_contenido[[i]]$Data
   division <- strsplit(paste(poblacion_contenido[[i]]$Nombre), split = ". ", fixed = T)[[1]]
   poblacion.i <- dato.i %>% list.select(T3_Periodo, Anyo, Valor) %>% list.stack %>% 
@@ -85,9 +87,6 @@ for(i in 1:n){
 }
 ```
 
-```{r}
-
-```
 
 ```{r}
 # Tabla de frecuencias de los datos
