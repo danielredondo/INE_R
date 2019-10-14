@@ -134,24 +134,6 @@ defunciones_contenido[[1]]$Data[[1]]$Valor
 
 Pero esto no es lo ideal, así que seguimos procesando. Utilizaremos el paquete `rlist` de manera iterativa para extraer los datos y metadatos de la información descargada, y formar así un data.frame.
 
-```{r}
-n <- length(defunciones_contenido)
-
-for(i in 1:n){
-   dato.i <- defunciones_contenido[[i]]
-   defunciones.i <- list.select(dato.i$Data, Valor) %>% list.stack %>%
-         cbind(codigo = dato.i$MetaData[[1]]$Nombre) %>%
-         cbind(sexo = dato.i$MetaData[[2]]$Nombre) %>%
-         cbind(s_gest = dato.i$MetaData[[3]]$Nombre)
-   ifelse(i == 1,
-          defunciones <- defunciones.i,
-          defunciones <- rbind(defunciones, defunciones.i))
-}
-
-head(defunciones)
-```
-
-También podríamos haber descargado los códigos de las variables, en lugar de las etiquetas:
 
 ```{r}
 n <- length(defunciones_contenido)
@@ -170,6 +152,28 @@ for(i in 1:n){
 head(defunciones)
 ```
 
+También podríamos haber descargado las etiquetas de las variables, en lugar de los códigos:
+
+
+```{r}
+n <- length(defunciones_contenido)
+
+for(i in 1:n){
+   dato.i <- defunciones_contenido[[i]]
+   defunciones.i <- list.select(dato.i$Data, Valor) %>% list.stack %>%
+         cbind(codigo = dato.i$MetaData[[1]]$Nombre) %>%
+         cbind(sexo = dato.i$MetaData[[2]]$Nombre) %>%
+         cbind(s_gest = dato.i$MetaData[[3]]$Nombre)
+   ifelse(i == 1,
+          defunciones <- defunciones.i,
+          defunciones <- rbind(defunciones, defunciones.i))
+}
+
+head(defunciones)
+```
+
+
+
 ### 2.3. Ejemplo de uso
 
 Con el data.frame obtenido, podemos trabajar. Por ejemplo:
@@ -177,11 +181,12 @@ Con el data.frame obtenido, podemos trabajar. Por ejemplo:
 ```{r}
 library(ggplot2)
 
-datos <- subset(defunciones, defunciones$codigo == "0193ixxiitodaslascausas" &
-                  defunciones$sexo != "ambossexos" &
-                  ! defunciones$s_gest %in% c("total", "noconsta"))
+datos <- subset(defunciones, defunciones$codigo == "01-93 I-XXII.Todas las causas" &
+                  defunciones$sexo != "Ambos sexos" &
+                  ! defunciones$s_gest %in% c("Total", "No consta"))
 
 ggplot(datos, aes(x = s_gest, y = Valor, fill = sexo)) +
+  scale_fill_manual(values=c("darkblue", "deepskyblue")) +
   geom_bar(stat = "identity",  position = "dodge") +
   ylab("Defunciones") + xlab("Semanas de gestación") +
   ggtitle("Defunciones según semanas de gestación, por sexos") +
