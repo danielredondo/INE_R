@@ -85,6 +85,7 @@ Cargamos los paquetes necesarios:
 library(httr)
 library(rlist)
 library(dplyr)
+library(data.table)
 ```
 
 ```{r}
@@ -146,7 +147,7 @@ for(i in 1:n){
          cbind(s_gest = dato.i$MetaData[[3]]$Codigo)
    ifelse(i == 1,
           defunciones <- defunciones.i,
-          defunciones <- rbind(defunciones, defunciones.i))
+          defunciones <- rbindlist(list(defunciones, defunciones.i)))
 }
 
 head(defunciones)
@@ -166,7 +167,7 @@ for(i in 1:n){
          cbind(s_gest = dato.i$MetaData[[3]]$Nombre)
    ifelse(i == 1,
           defunciones <- defunciones.i,
-          defunciones <- rbind(defunciones, defunciones.i))
+          defunciones <- rbindlist(list(defunciones, defunciones.i)))
 }
 
 head(defunciones)

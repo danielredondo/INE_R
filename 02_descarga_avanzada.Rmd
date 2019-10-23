@@ -25,6 +25,7 @@ editor_options:
 library(httr)
 library(dplyr)
 library(rlist)
+library(data.table)
 ```
 
 ```{r}
@@ -83,7 +84,7 @@ for(i in 1:n){
     cbind(edad = division[1]) %>% 
     cbind(sexo = division[3]) %>% 
     cbind(prov = division[2])
-  ifelse(i == 1, poblacion <- poblacion.i, poblacion <- rbind(poblacion, poblacion.i))
+  ifelse(i == 1, poblacion <- poblacion.i, poblacion <- rbindlist(list(poblacion, poblacion.i)))
 }
 ```
 
