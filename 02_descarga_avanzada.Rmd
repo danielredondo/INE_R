@@ -1,9 +1,8 @@
-
 ---
 title: "INE con R: descargando datos del Instituto Nacional de Estadística desde R"
 subtitle: "Segunda parte: Descarga avanzada. Población por provincias, por edad simple"
 author: "Daniel Redondo-Sánchez"
-date: "11-02-2019"
+date: "13-06-2021"
 output:
   html_document:
     highlight: tango
@@ -15,12 +14,12 @@ output:
   pdf_document:
     toc: yes
 editor_options: 
-  chunk_output_type: console
+  chunk_output_type: inline
 ---
 
 # 1. Descarga de información
 
-```{r message=FALSE}
+```{r message=FALSE, warning = FALSE}
 # Carga de paquetes
 library(httr)
 library(dplyr)
@@ -28,43 +27,21 @@ library(rlist)
 library(data.table)
 ```
 
+Se va a realizar una descarga de la población por provincias por edad simple de los últimos 6 periodos disponibles. La descarga puede ser lenta.
+
 ```{r}
 # Como la URL es:
 # http://ine.es/jaxiT3/Tabla.htm?t=9687&L=0,
 # ponemos el identificador 9678
 # Descargamos sin metadatos para que sea más rápido
-url <- "http://servicios.ine.es/wstempus/js/ES/DATOS_TABLA/9687?nult=5&tip=A"
+url <- "http://servicios.ine.es/wstempus/js/ES/DATOS_TABLA/9687?nult=6&tip=A"
 poblacion_json <- GET(url)
-
 ```
 
-Parece que la descarga ha sido exitosa:
+La descarga ha sido exitosa:
 
 ```{r}
 poblacion_json$status_code
-```
-
-pero
-
-```{r}
-content(poblacion_json)$status
-```
-
-así que solicitamos la información hasta que es descargada con éxito:
-
-```{r descarga}
-i <- 0
-while(is.null(content(poblacion_json)$status) == FALSE){
-  i <- i + 1
-  cat("Durmiendo...")
-  Sys.sleep(5)
-  cat(" Obteniendo información, puede tardar unos minutos... \n")
-  poblacion_json <- GET(url)
-  ifelse(is.null(content(poblacion_json)$status) == TRUE,
-         print(paste0("Intento nº", i, ": Archivo descargado.")),
-         print(paste0("Intento nº", i, ": ", content(poblacion_json)$status)))
-}
-
 ```
 
 # 2. Procesamiento
@@ -76,21 +53,19 @@ poblacion_contenido <- content(poblacion_json)
 n <- length(poblacion_contenido)
 
 for(i in 1:n){
-  # Medidor de proceso
-  # if(i %% 1000 == 0) print(paste0(i, "/", n))
   dato.i <- poblacion_contenido[[i]]$Data
   division <- strsplit(paste(poblacion_contenido[[i]]$Nombre), split = ". ", fixed = T)[[1]]
   poblacion.i <- dato.i %>% list.select(T3_Periodo, Anyo, Valor) %>% list.stack %>% 
     cbind(edad = division[1]) %>% 
-    cbind(sexo = division[3]) %>% 
-    cbind(prov = division[2])
+    cbind(prov = division[2]) %>% 
+    cbind(sexo = division[3])
   ifelse(i == 1, poblacion <- poblacion.i, poblacion <- rbindlist(list(poblacion, poblacion.i)))
 }
 ```
 
+Podemos ver las tablas de frecuencias de los datos:
 
 ```{r}
-# Tabla de frecuencias de los datos
 table(poblacion$edad)
 table(poblacion$sexo)
 table(poblacion$prov)
@@ -105,7 +80,6 @@ poblacion$edad <- as.character(poblacion$edad)
 
 # m = n * número de periodos añadidos, se desdobla la lista
 m <- nrow(poblacion)
-m
 
 for(i in 1:m){
   if(poblacion$edad[[i]] == "Total Nacional"){
@@ -113,16 +87,22 @@ for(i in 1:m){
      poblacion$prov[[i]] = "Total Nacional"
   }
 }
+```
 
-# Trabajamos con la edad (500 será nuestro código para el total)
+Preprocesamos también la edad.
+
+```{r}
 for(i in 1:m){
+  # Quitamos la palabra "años"
   poblacion$edad[[i]] <- strsplit(poblacion$edad[[i]], " ")[[1]][1]
+  # El código 500 será el total de las edades
   if(poblacion$edad[[i]] == "Todas") poblacion$edad[[i]] <- "500"
 }
 
 poblacion$edad <- as.numeric(poblacion$edad)
 ```
 
+Los datos están listos para usarse.
 ```{r}
 # Tabla de frecuencias de los datos
 table(poblacion$edad)
@@ -133,10 +113,13 @@ table(poblacion$Anyo, poblacion$T3_Periodo)
 
 # 3. Ejemplo de uso
 
-```{r grafico final}
-datos <- subset(poblacion, poblacion$edad != 500 & poblacion$prov == "Granada" & poblacion$sexo != "Total")
-
+```{r grafico final, warning = FALSE}
 library(ggplot2)
-qplot(edad, Valor, col = sexo, data = datos, main = "Población por edad simple, por sexos. Varios periodos, Granada.",
-      facets = Anyo~T3_Periodo, ylim = c(0, max(datos$Valor)))
+
+datos <- poblacion %>%
+  filter(edad != 500 & prov == "Granada" & sexo != "Total")
+
+qplot(edad, Valor, col = sexo, data = datos,
+      main = "Población por edad simple, por sexos. Varios periodos, Granada.",
+      facets = Anyo ~ T3_Periodo, ylim = c(0, max(datos$Valor)))
 ```

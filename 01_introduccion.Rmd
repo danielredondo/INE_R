@@ -2,7 +2,7 @@
 title: "INE con R: descargando datos del Instituto Nacional de Estadística desde R"
 subtitle: "Primera parte: Introducción"
 author: "Daniel Redondo-Sánchez - daniel.redondo.easp@juntadeandalucia.es"
-date: "11-02-2019"
+date: "13-06-2021"
 output:
   html_document:
     highlight: tango
@@ -35,7 +35,7 @@ Dos enlaces nos serán muy útiles para comprender este generador, e incluso no 
 
 * [Obtención de identificadores de objetos usando INEbase](https://www.ine.es/dyngs/DataLab/es/manual.html?cid=1259945947403). Permite reconocer el identificador de la operación estadística que se incluye en la URL.
 
-### 1.2. Generar URL sabiendo número de tabla
+### 1.2. Generar URL sabiendo el número de tabla
 
 Si queremos descargar información de una URL del tipo
 
@@ -81,7 +81,7 @@ http://servicios.ine.es/wstempus/js/ES/DATOS_TABLA/t15/p417/a2017/l0/01007.px?ti
 ### 2.1. Primeros pasos
 
 Cargamos los paquetes necesarios:
-```{r message=FALSE}
+```{r message=FALSE, warning = FALSE}
 library(httr)
 library(rlist)
 library(dplyr)
@@ -177,19 +177,23 @@ head(defunciones)
 
 ### 2.3. Ejemplo de uso
 
-Con el data.frame obtenido, podemos trabajar. Por ejemplo:
+Podemos hacer un gráfico con los datos descargados:
 
-```{r}
+```{r, warning = FALSE}
 library(ggplot2)
 
-datos <- subset(defunciones, defunciones$codigo == "01-93 I-XXII.Todas las causas" &
-                  defunciones$sexo != "Ambos sexos" &
-                  ! defunciones$s_gest %in% c("Total", "No consta"))
-
-ggplot(datos, aes(x = s_gest, y = Valor, fill = sexo)) +
-  scale_fill_manual(values=c("darkblue", "deepskyblue")) +
-  geom_bar(stat = "identity",  position = "dodge") +
-  ylab("Defunciones") + xlab("Semanas de gestación") +
-  ggtitle("Defunciones según semanas de gestación, por sexos") +
-  theme(legend.position="top")
+defunciones %>%
+  filter(
+    codigo == "01-93 I-XXII.Todas las causas",
+    sexo != "Ambos sexos",
+    ! s_gest %in% c("Total", "No consta")
+  ) %>%
+  ggplot(aes(x = s_gest, y = Valor, fill = sexo)) +
+  scale_fill_manual(values = c("darkblue", "deepskyblue")) +
+  geom_bar(stat = "identity", position = "dodge") +
+  ylab("Defunciones") +
+  xlab("Semanas de gestación") +
+  ggtitle("Defunciones por sexos según semanas de gestación") +
+  theme_classic() + 
+  theme(legend.position = "top")
 ```

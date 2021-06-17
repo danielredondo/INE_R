@@ -1,6 +1,8 @@
 # Tutorial para descargar datos del Instituto Nacional de Estadística (INE) con R usando el servicio API JSON
 ### *Daniel Redondo Sánchez*
 
+*Trabajo presentado en las XI Jornadas de Usuarios de R, celebradas en Madrid (2019)* 
+
 En este trabajo se describe un método de descarga de información del **Instituto Nacional de Estadística** (INE) usando R. El código es totalmente reproducible.
 
 Se utiliza el servicio **API** (Application Programming Interface) del INE. En primer lugar, se obtiene una URL válida para la descarga, en función del tipo de información a descargar (si es una tabla con número definido, o si es un fichero PCAxis).
